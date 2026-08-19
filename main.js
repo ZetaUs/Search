@@ -20,7 +20,7 @@ async function runSearch() {
   loading.style.display = "block";
 
   try {
-    const timeout = setTimeout(() => abortCtrl.abort(), 10000);
+    const timeout = setTimeout(() => abortCtrl.abort(), 12000);
     const resp = await fetch(`${PROXY_API}?q=${encodeURIComponent(kw)}`, {
       signal: abortCtrl.signal
     });
