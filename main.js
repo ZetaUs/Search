@@ -4,64 +4,49 @@ const resultList = document.getElementById('resultList');
 const loading = document.getElementById('loading');
 
 const PROXY_API = "https://search-server.zztxorg.dpdns.org";
-let fetchAbortController = null;
+let abortCtrl = null;
 
 searchBtn.addEventListener('click', runSearch);
 searchInput.addEventListener('keydown', e => e.key === 'Enter' && runSearch());
 
 async function runSearch() {
-  const keyword = searchInput.value.trim();
-  if (!keyword) {
-    alert("请输入搜索关键词");
-    return;
-  }
+  const kw = searchInput.value.trim();
+  if (!kw) return alert("请输入关键词");
 
-  if (fetchAbortController) fetchAbortController.abort();
-  fetchAbortController = new AbortController();
+  if (abortCtrl) abortCtrl.abort();
+  abortCtrl = new AbortController();
 
   resultList.innerHTML = "";
   loading.style.display = "block";
 
   try {
-    // 改用web网页搜索接口，获取普通网页链接，不再只拿百科
-    const duckUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(keyword)}&format=json&no_html=1&kl=zh-cn`;
-    const proxyFullUrl = `${PROXY_API}?target=${encodeURIComponent(duckUrl)}`;
-
-    const timeout = setTimeout(() => fetchAbortController.abort(), 10000);
-    const res = await fetch(proxyFullUrl, { signal: fetchAbortController.signal });
+    const timeout = setTimeout(() => abortCtrl.abort(), 10000);
+    const resp = await fetch(`${PROXY_API}?q=${encodeURIComponent(kw)}`, {
+      signal: abortCtrl.signal
+    });
     clearTimeout(timeout);
 
-    if (!res.ok) throw new Error("接口异常");
-    const data = await res.json();
+    const data = await resp.json();
     loading.style.display = "none";
 
-    // 合并网页结果 + 百科词条，覆盖所有搜索内容
-    let allResults = [];
-    if (data.Results && data.Results.length) allResults.push(...data.Results);
-    if (data.RelatedTopics && data.RelatedTopics.length) allResults.push(...data.RelatedTopics);
+    if (data.error) throw new Error(data.msg);
+    const list = data.results || [];
 
-    if (allResults.length === 0) {
+    if (list.length === 0) {
       resultList.innerHTML = `<p style="text-align:center;color:#666;padding:30px;">未找到相关结果</p>`;
       return;
     }
 
-    // 逐条实时渲染，出来一条展示一条
-    for (const item of allResults) {
-      if (!item.FirstURL && !item.URL) continue;
-      const link = item.FirstURL || item.URL;
-      const title = item.Text || item.Title || "无标题";
-      const desc = item.Abstract || item.Description || "暂无页面描述";
-
-      const html = `
+    for (const item of list) {
+      const itemHtml = `
         <div class="result-item">
-          <a href="${link}" target="_blank">${title}</a>
-          <div class="url">${link}</div>
-          <div class="desc">${desc}</div>
+          <a href="${item.url}" target="_blank">${item.title}</a>
+          <div class="url">${item.url}</div>
+          <div class="desc">${item.desc}</div>
         </div>
       `;
-      resultList.innerHTML += html;
+      resultList.innerHTML += itemHtml;
     }
-
   } catch (err) {
     loading.style.display = "none";
     if (err.name !== "AbortError") {
