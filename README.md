@@ -3,7 +3,7 @@
 基于 GitHub Pages + Cloudflare Workers 搭建的静态搜索站
 
 ### 在线地址
-https://xxx.pages.dev
+https://search.zztxorg.dpdns.org
 
 ### 部署教程
 1. Fork 本仓库
